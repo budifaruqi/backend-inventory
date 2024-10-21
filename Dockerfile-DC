@@ -1,0 +1,27 @@
+FROM 10.10.0.195/base-images/python:3.10.12-slim-bullseye
+
+# Set work directory
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt \
+    && apt-get update \
+    && apt-get install -y git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the rest of the code
+COPY . .
+
+# Ensure /app directory is owned by root
+RUN chown -R root:root /app
+
+# Mark the /app directory as safe for Git (to avoid "dubious ownership" error)
+RUN git config --global --add safe.directory /app
+
+# Execute git last activity
+RUN git log -1 --pretty=format:'%H;%h;%cI;%ce;%cn' > git_log.txt
+
+# Run the Uvicorn
+CMD ["uvicorn", "main:app", "--loop", "uvloop", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
