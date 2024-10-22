@@ -3,10 +3,10 @@ from typing import Any, List
 from fastapi.encoders import jsonable_encoder
 from bson import SON
 from classes.classMongoDb import TMongoCollection
-from mongodb.mongoIndex import MongoIndex, index_account, index_account_external, index_company, index_company_category, index_global_config, index_lead, index_lead_tag, index_master_data, index_master_data_follower, index_partner, index_uom_category
+from mongodb.mongoIndex import MongoIndex, index_account, index_account_external, index_company, index_company_category, index_global_config, index_lead, index_lead_tag, index_master_data, index_master_data_follower, index_partner, index_uom_category, index_uom
 from utils.util_logger import msLogger
 from mongodb.mongoClient import MGDB
-from mongodb.mongoCollection import TbAccount, TbAccountExternal, TbCompany, TbCompanyCategory, TbGlobalConfig, TbLeadTag, TbMasterData, TbMasterDataFollower, TbPartner, TbLead, TbUomCategory, TbUom
+from mongodb.mongoCollection import *
 from mongodb.mongoCollectionName import CollectionNames
 
 class MongoIndexInit:
@@ -27,6 +27,7 @@ ListMongoIndexInit: list[MongoIndexInit] = [
     MongoIndexInit(TbLead, CollectionNames.TbLead.value, indexs=[i.value for i in index_lead]),
     MongoIndexInit(TbLeadTag, CollectionNames.TbLeadTag.value, indexs=[i.value for i in index_lead_tag]),
     MongoIndexInit(TbUomCategory, CollectionNames.TbUomCategory.value, indexs=[i.value for i in index_uom_category]),
+    MongoIndexInit(TbUom, CollectionNames.TbUom.value, indexs=[i.value for i in index_uom]),
 
 
 ]

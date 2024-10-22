@@ -188,6 +188,14 @@ class index_uom(Enum):
             MongoIndexKey("name", pymongo.ASCENDING)
         ]
     )
+    isDeleted_companyId_categoryId = MongoIndex(
+        "index_isDeleted_companyId_categoryId",
+        [
+            MongoIndexKey("isDeleted", pymongo.ASCENDING),
+            MongoIndexKey("companyId", pymongo.ASCENDING),
+            MongoIndexKey("categoryId", pymongo.ASCENDING)
+        ]
+    )
     isDeleted_companyId_isActive_categoryId_name = MongoIndex(
         "index_isDeleted_companyId_isActive_categoryId_name",
         [
@@ -213,6 +221,32 @@ class index_generic_material_category(Enum):
             MongoIndexKey("isDeleted", pymongo.ASCENDING),
             MongoIndexKey("companyId", pymongo.ASCENDING),
             MongoIndexKey("name", pymongo.ASCENDING)
+        ]
+    )
+# ---------------------------------------------------------------------------------------------------------
+class index_generic_material(Enum):
+    isDeleted_name = MongoIndex(
+        "index_isDeleted_name",
+        [
+            MongoIndexKey("isDeleted", pymongo.ASCENDING),
+            MongoIndexKey("name", pymongo.ASCENDING)
+        ]
+    )
+    isDeleted_companyId_name = MongoIndex(
+        "index_isDeleted_companyId_name",
+        [
+            MongoIndexKey("isDeleted", pymongo.ASCENDING),
+            MongoIndexKey("companyId", pymongo.ASCENDING),
+            MongoIndexKey("name", pymongo.ASCENDING)
+        ]
+    )
+    isDeleted_companyId_name_categoryId = MongoIndex(
+        "index_isDeleted_companyId_name_categoryId",
+        [
+            MongoIndexKey("isDeleted", pymongo.ASCENDING),
+            MongoIndexKey("companyId", pymongo.ASCENDING),
+            MongoIndexKey("name", pymongo.ASCENDING),
+            MongoIndexKey("categoryId", pymongo.ASCENDING)
         ]
     )
 # ---------------------------------------------------------------------------------------------------------

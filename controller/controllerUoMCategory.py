@@ -4,9 +4,10 @@ from typing import Any
 from models.shared.modelDataType import ObjectId
 from models.shared.modelEnvironment import MsEnvironment
 from models.shared.modelPagination import MsPagination, MsPaginationResult
+from models.uom.modelUoM import UoMBase
 from models.uom.modelUoMCategory import UoMCategoryCreateCommandRequest, UoMCategoryCreateWebRequest, UoMCategoryView
-from mongodb.mongoCollection import TbUomCategory
-from mongodb.mongoIndex import index_uom_category
+from mongodb.mongoCollection import TbUomCategory, TbUom
+from mongodb.mongoIndex import index_uom, index_uom_category
 from repositories.repoUoMCategory import UoMCategoryRepository
 from utils.util_http_exception import MsHTTPConflictException, MsHTTPInternalServerErrorException, MsHTTPNotFoundException
 from utils.util_http_response import MsHTTPExceptionMessage, MsHTTPExceptionType
@@ -48,6 +49,20 @@ class UoMCategoryController:
             resultItemsClass=UoMCategoryView,
             explain=True if settings.project.environment == MsEnvironment.development else False
         )
+
+        for category in data.items:
+            uomQuery:dict[str, Any] = {
+                "companyId": companyId,
+                "categoryId": category.id,
+                "isDeleted": False
+            }
+            cursor = TbUom.find(
+                        uomQuery,
+                        UoMBase.Projection(), 
+                        hint=index_uom.isDeleted_companyId_categoryId.value.indexName
+                    )
+            itemsRaw: list[dict[str, Any]] = await cursor.to_list(None) # type: ignore
+            category.uoms = [UoMBase(**uom) for uom in itemsRaw] 
 
         return data
         

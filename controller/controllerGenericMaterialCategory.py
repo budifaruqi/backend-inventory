@@ -115,7 +115,7 @@ class GenericMaterialCategoryController:
         )
         if not newId:
             raise MsHTTPInternalServerErrorException(
-                type="FAILED_CREATE_UOM_CATEGORY"
+                type="FAILED_CREATE_GENERIC_MATERIAL_CATEGORY"
             )
         return newId
     

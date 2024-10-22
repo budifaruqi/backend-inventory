@@ -1,69 +1,64 @@
 from datetime import datetime
 import re
 from typing import Any
+from controller.controllerUoM import UoMController
 from controller.controllerUoMCategory import UoMCategoryController
-from models.shared.modelDataType import ObjectId
 from models.shared.modelEnvironment import MsEnvironment
-from models.shared.modelPagination import MsPagination
-from models.uom.modelUoM import UoMCreateCommandRequest, UoMCreateWebRequest, UoMView
-from mongodb.mongoCollection import TbUom
-from mongodb.mongoIndex import index_uom
-from repositories.repoUoM import UoMRepository
+from mongodb.mongoCollection import TbGenericMaterial
+from models.generic_material.modelGenericMaterial import GenericMaterialCreateCommandRequest, GenericMaterialCreateWebRequest, GenericMaterialView
+from models.shared.modelDataType import ObjectId
+from models.shared.modelPagination import MsPagination, MsPaginationResult
+from mongodb.mongoIndex import index_generic_material
+from repositories.repoGenericMaterial import GenericMaterialRepository
 from utils.util_http_exception import MsHTTPConflictException, MsHTTPInternalServerErrorException, MsHTTPNotFoundException
 from utils.util_http_response import MsHTTPExceptionMessage, MsHTTPExceptionType
 from utils.util_pagination import Paginate
 from config.config import settings
 
-class UoMController:
 
+class GenericMaterialController:
     @staticmethod
     async def Find(
         name: str | None,
         categoryId: ObjectId | None,
-        isActive: bool | None,
         companyId: ObjectId,
         paging: MsPagination
-    ):
+    ) -> MsPaginationResult[GenericMaterialView]:
         query: dict[str, Any] = {
-            "isDeleted": False,
-            "companyId": companyId
-        }
+                "isDeleted": False,
+                "companyId": companyId
+            }
         query.update({
             "name": {"$regex": re.compile(re.escape(name.strip()), re.IGNORECASE)} 
             if name and name.strip() else None,
             "categoryId": categoryId if categoryId is not None else None,
-            "isActive": isActive if isActive is not None else None
         })
 
-        # Remove None values from the query
-        query = {k: v for k, v in query.items() if v is not None}
         print(query)
 
         # Paginate and return results
         data = await Paginate(
-            collection=TbUom,
+            collection=TbGenericMaterial,
             query_filter=query,
             params=paging,
             session=None,
-            hint=index_uom.isDeleted_companyId_isActive_categoryId_name.value.indexName,
+            hint=index_generic_material.isDeleted_companyId_name_categoryId.value.indexName,
             filterItem=True,
-            resultItemsClass=UoMView,
+            resultItemsClass=GenericMaterialView,
             explain=True if settings.project.environment == MsEnvironment.development else False
         )
 
         return data
-    
+        
     @staticmethod
     async def Combo(
         name: str | None,
         categoryId: ObjectId | None,
-        isActive: bool | None,
         companyId: ObjectId
     ):
-        data = await UoMRepository.Combo(
+        data = await GenericMaterialRepository.Combo(
             name,
             categoryId,
-            isActive,
             companyId
         )
 
@@ -74,12 +69,11 @@ class UoMController:
         id: ObjectId,
     ):
         
-        data = await UoMRepository.GetById(
+        data = await GenericMaterialRepository.GetById(
             id
         )
-
         if data is None:
-            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.UOM_NOT_FOUND)
+            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.GENERIC_MATERIAL_NOT_FOUND)
         
         return data
     
@@ -88,38 +82,44 @@ class UoMController:
         id: ObjectId,
         companyId: ObjectId
     ):
-        data = await UoMRepository.GetByIdAndCompanyId(
+        data = await GenericMaterialRepository.GetByIdAndCompanyId(
             id, companyId
         )
         if data is None:
-            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, "UOM_NOT_FOUND")
+            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.GENERIC_MATERIAL_NOT_FOUND)
         
         return data
-    
+
     @staticmethod
     async def Create(
         companyId: ObjectId,
-        request: UoMCreateWebRequest,
+        request: GenericMaterialCreateWebRequest,
         createdTime: datetime,
         createdBy: ObjectId
     ):
-        if await UoMRepository.NameExists(
+        if await GenericMaterialRepository.NameExists(
             request.name,
             companyId
         ):
             raise MsHTTPConflictException(
-                MsHTTPExceptionType.UOM_NAME_ALREADY_EXISTS, 
-                MsHTTPExceptionMessage.UOM_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
+                MsHTTPExceptionType.GENERIC_MATERIAL_NAME_ALREADY_EXISTS, 
+                MsHTTPExceptionMessage.GENERIC_MATERIAL_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
                 )
-        category = await UoMCategoryController.GetByIdAndCompanyId(request.categoryId, companyId)
+        
+        category = await UoMCategoryController.GetByIdAndCompanyId(
+            request.categoryId, companyId
+        )
+        uom = await UoMController.GetByIdAndCompanyId(
+            request.uomId, companyId
+        )
 
-        newId = await UoMRepository.Create(
-            UoMCreateCommandRequest(
+        newId = await GenericMaterialRepository.Create(
+            GenericMaterialCreateCommandRequest(
                 name=request.name,
                 categoryId=category.id,
-                type=request.type,
-                ratio=request.ratio,
-                isActive=request.isActive,
+                salesPrice=request.salesPrice,
+                cost=request.cost,
+                uomId=uom.id,
                 companyId=companyId,
                 createdTime= createdTime,
                 createdBy=createdBy 
@@ -127,51 +127,58 @@ class UoMController:
         )
         if not newId:
             raise MsHTTPInternalServerErrorException(
-                type="FAILED_CREATE_UOM"
+                type="FAILED_CREATE_GENERIC_MATERIAL"
             )
         return newId
     
     @staticmethod
     async def UpdateByIdAndCompanyId(
         id: ObjectId,
-        request: UoMCreateWebRequest,
+        request: GenericMaterialCreateWebRequest,
         companyId: ObjectId,
         updatedTime: datetime,
         updatedBy: ObjectId
     ): 
-        data = await UoMController.GetByIdAndCompanyId(
+        data = await GenericMaterialController.GetByIdAndCompanyId(
             id, companyId
         )
         if data.name == request.name: 
             return data
 
-        if await UoMRepository.NameExists(
-            request.name,companyId
+        if await GenericMaterialRepository.NameExists(
+            request.name,
+            companyId
         ):
             raise MsHTTPConflictException(
-                MsHTTPExceptionType.UOM_NAME_ALREADY_EXISTS, 
-                MsHTTPExceptionMessage.UOM_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
+                MsHTTPExceptionType.GENERIC_MATERIAL_NAME_ALREADY_EXISTS, 
+                MsHTTPExceptionMessage.GENERIC_MATERIAL_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
                 )
-        category = await UoMCategoryController.GetByIdAndCompanyId(request.categoryId, companyId)
-
-        if not await UoMRepository.UpdateByUser(
+        
+        category = await UoMCategoryController.GetByIdAndCompanyId(
+            request.categoryId, companyId
+        )
+        uom = await UoMController.GetByIdAndCompanyId(
+            request.uomId, companyId
+        )
+        
+        if not await GenericMaterialRepository.UpdateByUser(
             data.id,
             {
                 "name" : request.name,
                 "categoryId":category.id,
-                "type":request.type,
-                "ratio":request.ratio,
-                "isActive":request.isActive,
+                "salesPrice":request.salesPrice,
+                "cost":request.cost,
+                "uomId":uom.id
             },
             updatedBy,
             updatedTime
         ): 
             raise MsHTTPInternalServerErrorException(
-                "FAILED_UPDATE_UOM",
-                "Gagal mengubah Unit Of Measure"
+                "FAILED_UPDATE_GENERIC_MATERIAL",
+                "Gagal mengubah  Generic Material"
             )
         
-        updatedData = await UoMController.GetByIdAndCompanyId(data.id, companyId)
+        updatedData = await GenericMaterialController.GetByIdAndCompanyId(data.id, companyId)
 
         return updatedData
     
@@ -183,12 +190,12 @@ class UoMController:
         updatedTime: datetime,
         updatedBy: ObjectId
     ): 
-        data = await UoMController.GetByIdAndCompanyId(
+        data = await GenericMaterialController.GetByIdAndCompanyId(
             id,
             companyId
         )
 
-        if not await UoMRepository.UpdateByUser(
+        if not await GenericMaterialRepository.UpdateByUser(
             data.id,
             {
                 "isDeleted" : True
@@ -197,11 +204,11 @@ class UoMController:
             updatedTime
         ): 
             raise MsHTTPInternalServerErrorException(
-                "FAILED_DELETE_UOM",
-                "Gagal menghapus Unit of Measure"
+                "FAILED_DELETE_GENERIC_MATERIAL",
+                "Gagal menghapus Generic Material"
             )
         
-        deletedData = await UoMRepository.GetByIdAndCompanyId(
+        deletedData = await GenericMaterialRepository.GetByIdAndCompanyId(
             id,
             companyId,
             ignoreDeleted=True

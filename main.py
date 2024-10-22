@@ -517,9 +517,11 @@ if settings.config.installation:
 #--------------------------------------------------------------------- begin routers
 # imports
 # sales
-from routers.routerMasterData import ApiRouter_Master_Data
-from routers.routerMasterDataFollower import ApiRouter_Master_Data_Follower
-from routers.routerUoMCategory import ApiRouter_UoM_Category
+from routers.master_data.routerMasterData import ApiRouter_Master_Data
+from routers.master_data.routerMasterDataFollower import ApiRouter_Master_Data_Follower
+from routers.uom.routerUoMCategory import ApiRouter_UoM_Category
+from routers.uom.routerUoM import ApiRouter_UoM
+from routers.generic_material.routerGenericMaterialCategory import ApiRouter_Generic_Material_Category
 # Follower Endpoint
 
 
@@ -528,6 +530,9 @@ from routers.routerUoMCategory import ApiRouter_UoM_Category
 app.include_router(ApiRouter_Master_Data, prefix=rootPath)
 app.include_router(ApiRouter_Master_Data_Follower, prefix=rootPath)
 app.include_router(ApiRouter_UoM_Category, prefix=rootPath)
+app.include_router(ApiRouter_UoM, prefix=rootPath)
+app.include_router(ApiRouter_Generic_Material_Category, prefix=rootPath)
+
 # Follower Endpoint
 
 

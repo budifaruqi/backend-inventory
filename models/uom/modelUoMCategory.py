@@ -38,7 +38,10 @@ class UoMCategoryView(UoMCategoryEx):
         alias="_id",
         title="Unit Of Measure Id"
     )
-    uoms : list[UoMBase]
+    uoms : list[UoMBase] | None = Field(
+        default=[],
+        title="List Unit Of Measure"
+    )
 
 class ResponseUoMCategoryView(ResponseModel):
     data: UoMCategoryView

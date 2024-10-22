@@ -45,7 +45,10 @@ class UoMCreateWebRequest(UoMBase):
     )
 
 class UoMCreateCommandRequest(AuditData, UoMEx):
-    pass
+    categoryId: ObjectId = Field(
+        ...,
+        title="UoM Category Id"
+    )
 
 # --------------------------------------------------------------------------
 class UoMView(UoMEx):
