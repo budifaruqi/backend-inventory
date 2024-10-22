@@ -3,6 +3,7 @@ from models.shared.modelDataType import BaseModel, ObjectId
 from models.shared.modelPagination import MsPaginationResult
 from models.shared.modelResponse import ResponseModel
 from models.shared.modelAuditData import AuditData
+from models.uom.modelUoM import UoMBase
 
 class UoMCategoryBase(BaseModel):
     name: str = Field(
@@ -21,7 +22,7 @@ class LeadInDb(AuditData,UoMCategoryEx):
     id: ObjectId = Field(
         default=...,
         alias="_id",
-        title="Unit Of Measure Id"
+        title="Unit Of Measure Category Id"
     )
 
 class UoMCategoryCreateWebRequest(UoMCategoryBase):
@@ -37,6 +38,7 @@ class UoMCategoryView(UoMCategoryEx):
         alias="_id",
         title="Unit Of Measure Id"
     )
+    uoms : list[UoMBase]
 
 class ResponseUoMCategoryView(ResponseModel):
     data: UoMCategoryView

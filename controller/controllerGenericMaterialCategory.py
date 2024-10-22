@@ -1,26 +1,26 @@
 from datetime import datetime
 import re
 from typing import Any
-from models.shared.modelDataType import ObjectId
 from models.shared.modelEnvironment import MsEnvironment
+from mongodb.mongoCollection import TbGenericMaterialCategory
+from models.generic_material.modelGenericMaterialCategory import GenericMaterialCategoryCreateCommandRequest, GenericMaterialCategoryCreateWebRequest, GenericMaterialCategoryView
+from models.shared.modelDataType import ObjectId
 from models.shared.modelPagination import MsPagination, MsPaginationResult
-from models.uom.modelUoMCategory import UoMCategoryCreateCommandRequest, UoMCategoryCreateWebRequest, UoMCategoryView
-from mongodb.mongoCollection import TbUomCategory
-from mongodb.mongoIndex import index_uom_category
-from repositories.repoUoMCategory import UoMCategoryRepository
+from mongodb.mongoIndex import index_generic_material_category
+from repositories.repoGenericMaterialCategory import GenericMaterialCategoryRepository
 from utils.util_http_exception import MsHTTPConflictException, MsHTTPInternalServerErrorException, MsHTTPNotFoundException
 from utils.util_http_response import MsHTTPExceptionMessage, MsHTTPExceptionType
 from utils.util_pagination import Paginate
 from config.config import settings
 
 
-class UoMCategoryController:
+class GenericMaterialCategoryController:
     @staticmethod
     async def Find(
         name: str | None,
         companyId: ObjectId,
         paging: MsPagination
-    ) -> MsPaginationResult[UoMCategoryView]:
+    ) -> MsPaginationResult[GenericMaterialCategoryView]:
         query: dict[str, Any] = {
                 "isDeleted": False,
                 "companyId": companyId
@@ -39,13 +39,13 @@ class UoMCategoryController:
 
         # Paginate and return results
         data = await Paginate(
-            collection=TbUomCategory,
+            collection=TbGenericMaterialCategory,
             query_filter=query,
             params=paging,
             session=None,
-            hint=index_uom_category.isDeleted_companyId_name.value.indexName,
+            hint=index_generic_material_category.isDeleted_companyId_name.value.indexName,
             filterItem=True,
-            resultItemsClass=UoMCategoryView,
+            resultItemsClass=GenericMaterialCategoryView,
             explain=True if settings.project.environment == MsEnvironment.development else False
         )
 
@@ -56,7 +56,7 @@ class UoMCategoryController:
         name: str | None,
         companyId: ObjectId
     ):
-        data = await UoMCategoryRepository.Combo(
+        data = await GenericMaterialCategoryRepository.Combo(
             name,
             companyId
         )
@@ -68,12 +68,12 @@ class UoMCategoryController:
         id: ObjectId,
     ):
         
-        data = await UoMCategoryRepository.GetById(
+        data = await GenericMaterialCategoryRepository.GetById(
             id
         )
 
         if data is None:
-            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.UOM_CATEGORY_NOT_FOUND)
+            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.GENERIC_MATERIAL_CATEGORY_NOT_FOUND)
         
         return data
     
@@ -82,66 +82,66 @@ class UoMCategoryController:
         id: ObjectId,
         companyId: ObjectId
     ):
-        data = await UoMCategoryRepository.GetByIdAndCompanyId(
+        data = await GenericMaterialCategoryRepository.GetByIdAndCompanyId(
             id, companyId
         )
         if data is None:
-            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, "UOM_CATEGORY_NOT_FOUND")
+            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.GENERIC_MATERIAL_CATEGORY_NOT_FOUND)
         
         return data
 
     @staticmethod
     async def Create(
         companyId: ObjectId,
-        request: UoMCategoryCreateWebRequest,
+        request: GenericMaterialCategoryCreateWebRequest,
         createdTime: datetime,
         createdBy: ObjectId
     ):
-        if await UoMCategoryRepository.NameExists(
+        if await GenericMaterialCategoryRepository.NameExists(
             request.name,
             companyId
         ):
             raise MsHTTPConflictException(
-                MsHTTPExceptionType.UOM_CATEGORY_NAME_ALREADY_EXISTS, 
-                MsHTTPExceptionMessage.UOM_CATEGORY_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
+                MsHTTPExceptionType.GENERIC_MATERIAL_CATEGORY_NAME_ALREADY_EXISTS, 
+                MsHTTPExceptionMessage.GENERIC_MATERIAL_CATEGORY_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
                 )
-        newMasterDataId = await UoMCategoryRepository.Create(
-            UoMCategoryCreateCommandRequest(
+        newId = await GenericMaterialCategoryRepository.Create(
+            GenericMaterialCategoryCreateCommandRequest(
                 name=request.name,
                 companyId=companyId,
                 createdTime= createdTime,
                 createdBy=createdBy 
             ),
         )
-        if not newMasterDataId:
+        if not newId:
             raise MsHTTPInternalServerErrorException(
                 type="FAILED_CREATE_UOM_CATEGORY"
             )
-        return newMasterDataId
+        return newId
     
     @staticmethod
     async def UpdateByIdAndCompanyId(
         id: ObjectId,
-        request: UoMCategoryCreateWebRequest,
+        request: GenericMaterialCategoryCreateWebRequest,
         companyId: ObjectId,
         updatedTime: datetime,
         updatedBy: ObjectId
     ): 
-        data = await UoMCategoryController.GetByIdAndCompanyId(
+        data = await GenericMaterialCategoryController.GetByIdAndCompanyId(
             id, companyId
         )
         if data.name == request.name: 
             return data
 
-        if await UoMCategoryRepository.NameExists(
+        if await GenericMaterialCategoryRepository.NameExists(
             request.name,companyId
         ):
             raise MsHTTPConflictException(
-                MsHTTPExceptionType.UOM_CATEGORY_NAME_ALREADY_EXISTS, 
-                MsHTTPExceptionMessage.UOM_CATEGORY_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
+                MsHTTPExceptionType.GENERIC_MATERIAL_CATEGORY_NAME_ALREADY_EXISTS, 
+                MsHTTPExceptionMessage.GENERIC_MATERIAL_CATEGORY_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
                 )
 
-        if not await UoMCategoryRepository.UpdateByUser(
+        if not await GenericMaterialCategoryRepository.UpdateByUser(
             data.id,
             {
                 "name" : request.name
@@ -150,11 +150,11 @@ class UoMCategoryController:
             updatedTime
         ): 
             raise MsHTTPInternalServerErrorException(
-                "FAILED_UPDATE_UOM_CATEGORY",
-                "Gagal mengubah Kategori Unit Of Measure"
+                "FAILED_UPDATE_GENERIC_MATERIAL_CATEGORY",
+                "Gagal mengubah Kategori Generic Material"
             )
         
-        updatedData = await UoMCategoryController.GetByIdAndCompanyId(data.id, companyId)
+        updatedData = await GenericMaterialCategoryController.GetByIdAndCompanyId(data.id, companyId)
 
         return updatedData
     
@@ -166,12 +166,12 @@ class UoMCategoryController:
         updatedTime: datetime,
         updatedBy: ObjectId
     ): 
-        data = await UoMCategoryController.GetByIdAndCompanyId(
+        data = await GenericMaterialCategoryController.GetByIdAndCompanyId(
             id,
             companyId
         )
 
-        if not await UoMCategoryRepository.UpdateByUser(
+        if not await GenericMaterialCategoryRepository.UpdateByUser(
             data.id,
             {
                 "isDeleted" : True
@@ -180,11 +180,11 @@ class UoMCategoryController:
             updatedTime
         ): 
             raise MsHTTPInternalServerErrorException(
-                "FAILED_DELETE_UOM_CATEGORY",
-                "Gagal menghapus Kategori Unit of Measure"
+                "FAILED_DELETE_GENERIC_MATERIAL_CATEGORY",
+                "Gagal menghapus Kategori Generic Material"
             )
         
-        deletedData = await UoMCategoryRepository.GetByIdAndCompanyId(
+        deletedData = await GenericMaterialCategoryRepository.GetByIdAndCompanyId(
             id,
             companyId,
             ignoreDeleted=True

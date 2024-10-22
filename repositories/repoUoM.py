@@ -3,22 +3,21 @@ import re
 from typing import Any
 from classes.classMongoDb import TMongoClientSession, TMongoCollection
 from models.shared.modelDataType import BaseModelObjectId, ObjectId, TGenericBaseModel
-from models.uom.modelUoMCategory import UoMCategoryCreateCommandRequest, UoMCategoryView
-from mongodb.mongoCollection import TbUomCategory
-from mongodb.mongoIndex import index_id, index_uom_category
+from models.uom.modelUoM import UoMCreateCommandRequest, UoMView
+from mongodb.mongoCollection import TbUom
+from mongodb.mongoIndex import index_id, index_uom
 from pymongo.results import InsertOneResult
 
-
-class UoMCategoryRepository:
+class UoMRepository:
 
     @staticmethod
     async def GetById(
     id: ObjectId,
     *,
-    coll: TMongoCollection = TbUomCategory,
+    coll: TMongoCollection = TbUom,
     session: TMongoClientSession | None = None,
     ignoreDeleted: bool = False,
-    resultClass: type[TGenericBaseModel] = UoMCategoryView
+    resultClass: type[TGenericBaseModel] = UoMView
     ) :
         query: dict[str, Any] = {"_id": id}
         if not ignoreDeleted:
@@ -36,33 +35,35 @@ class UoMCategoryRepository:
         
     @staticmethod
     async def Combo(
-        name: str | None ,
+        name: str | None,
+        categoryId: ObjectId | None,
+        isActive: bool | None,
         companyId: ObjectId,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbUom,
         session: TMongoClientSession | None = None,
-        resultClass: type[TGenericBaseModel] = UoMCategoryView
+        resultClass: type[TGenericBaseModel] = UoMView
     ):
         query:dict[str, Any]= {
                 "isDeleted": False,
                 "companyId": companyId
             }
-        if name is not None:
-            name = name.strip()
-            if len(name) > 0:
-                namePattern = re.compile(re.escape(name), re.IGNORECASE)
-                query.update(
-                    {
-                        "name": { "$regex": namePattern}
-                    }
-                )
+        query.update({
+            "name": {"$regex": re.compile(re.escape(name.strip()), re.IGNORECASE)} 
+            if name and name.strip() else None,
+            "categoryId": categoryId if categoryId is not None else None,
+            "isActive": isActive if isActive is not None else None
+        })
 
+        # Remove None values from the query
+        query = {k: v for k, v in query.items() if v is not None}
         print(query)
+
         cursor = coll.find(
             query,
             resultClass.Projection(),
             session=session,
-            hint=index_uom_category.isDeleted_companyId_name.value.indexName
+            hint=index_uom.isDeleted_companyId_isActive_categoryId_name.value.indexName
         )
         itemsRaw: list[dict[str, Any]] = await cursor.to_list(None) # type: ignore
 
@@ -73,10 +74,10 @@ class UoMCategoryRepository:
         id: ObjectId,
         companyId: ObjectId,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbUom,
         session: TMongoClientSession | None = None,
         ignoreDeleted: bool = False,
-        resultClass: type[TGenericBaseModel] = UoMCategoryView
+        resultClass: type[TGenericBaseModel] = UoMView
     ):
         query: dict[str, Any] = {
             "_id": id,
@@ -101,7 +102,7 @@ class UoMCategoryRepository:
         name: str,
         companyId: ObjectId,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbUom,
         session: TMongoClientSession | None = None,
         resultClass: type[TGenericBaseModel] = BaseModelObjectId
     ):
@@ -115,7 +116,7 @@ class UoMCategoryRepository:
             query,
             resultClass.Projection(),
             session=session,
-            hint=index_uom_category.isDeleted_companyId_name.value.indexName
+            hint=index_uom.isDeleted_companyId_name.value.indexName
         )
         if not dataRaw:
             return None
@@ -127,7 +128,7 @@ class UoMCategoryRepository:
         id: ObjectId,
         param: dict[str, Any],
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbUom,
         session: TMongoClientSession | None = None
     ):
         ret = await coll.update_one(
@@ -149,13 +150,13 @@ class UoMCategoryRepository:
         updatedBy: ObjectId,
         updatedTime: datetime,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbUom,
         session: TMongoClientSession | None = None
     ):
         param["updatedBy"] = updatedBy
         param["updatedTime"] = updatedTime
         
-        return await UoMCategoryRepository.Update(
+        return await UoMRepository.Update(
             id,
             param,
             coll=coll,
@@ -167,9 +168,9 @@ class UoMCategoryRepository:
     @staticmethod
     async def CreateOrUpdate(
         id:ObjectId,
-        param: UoMCategoryCreateCommandRequest,
+        param: UoMCreateCommandRequest,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbUom,
         session: TMongoClientSession | None = None
     ):
         d = param.model_dump(by_alias=False, exclude={"id"})
@@ -191,9 +192,9 @@ class UoMCategoryRepository:
         
     @staticmethod
     async def Create(
-        request: UoMCategoryCreateCommandRequest,
+        request: UoMCreateCommandRequest,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbUom,
         session: TMongoClientSession | None = None
     ):
         ret: InsertOneResult = await coll.insert_one(

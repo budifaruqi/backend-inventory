@@ -57,6 +57,9 @@ class MsHTTPExceptionType(str, Enum):
     LEAD_TAG_NAME_ALREADY_EXISTS = "LEAD_TAG_NAME_ALREADY_EXISTS"
     PARTNER_NAME_ALREADY_EXISTS = "PARTNER_NAME_ALREADY_EXISTS"
     UOM_CATEGORY_NAME_ALREADY_EXISTS = "UOM_CATEGORY_NAME_ALREADY_EXISTS"
+    UOM_NAME_ALREADY_EXISTS = "UOM_NAME_ALREADY_EXISTS"
+    GENERIC_MATERIAL_CATEGORY_NAME_ALREADY_EXISTS = "GENERIC_MATERIAL_CATEGORY_NAME_ALREADY_EXISTS"
+
 
 
 
@@ -187,6 +190,9 @@ class MsHTTPExceptionMessage(str, Enum):
     LEAD_TAG_NOT_FOUND = "Lead Tag tidak ditemukan"
     PARTNER_NOT_FOUND = "Partner tidak ditemukan"
     UOM_CATEGORY_NOT_FOUND = "Kategori Unit Of Measure tidak ditemukan"
+    UOM_NOT_FOUND = "Unit Of Measure tidak ditemukan"
+    GENERIC_MATERIAL_CATEGORY_NOT_FOUND = "Kategori Generic Material tidak ditemukan"
+
     # place other error 404 here
     
     # 409
@@ -198,6 +204,10 @@ class MsHTTPExceptionMessage(str, Enum):
     PARTNER_NAME_ALREADY_EXISTS_F = "Nama Partner \"{name}\" sudah terdaftar"
     MASTER_DATA_FOLLOWER_ALREADY_EXIST = "Master Data Follower sudah ada"
     UOM_CATEGORY_NAME_ALREADY_EXISTS_F = "Nama Kategori Unit of Measure \"{name}\" sudah terdaftar"
+    UOM_NAME_ALREADY_EXISTS_F = "Nama Unit of Measure \"{name}\" sudah terdaftar"
+    GENERIC_MATERIAL_CATEGORY_NAME_ALREADY_EXISTS_F = "Nama Kategori Generic Material \"{name}\" sudah terdaftar"
+
+
 
     # place other error 409 here
     

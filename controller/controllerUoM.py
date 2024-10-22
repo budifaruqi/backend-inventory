@@ -3,61 +3,66 @@ import re
 from typing import Any
 from models.shared.modelDataType import ObjectId
 from models.shared.modelEnvironment import MsEnvironment
-from models.shared.modelPagination import MsPagination, MsPaginationResult
-from models.uom.modelUoMCategory import UoMCategoryCreateCommandRequest, UoMCategoryCreateWebRequest, UoMCategoryView
-from mongodb.mongoCollection import TbUomCategory
-from mongodb.mongoIndex import index_uom_category
-from repositories.repoUoMCategory import UoMCategoryRepository
+from models.shared.modelPagination import MsPagination
+from models.uom.modelUoM import UoMCreateCommandRequest, UoMCreateWebRequest, UoMView
+from mongodb.mongoCollection import TbUom
+from mongodb.mongoIndex import index_uom
+from repositories.repoUoM import UoMRepository
 from utils.util_http_exception import MsHTTPConflictException, MsHTTPInternalServerErrorException, MsHTTPNotFoundException
 from utils.util_http_response import MsHTTPExceptionMessage, MsHTTPExceptionType
 from utils.util_pagination import Paginate
 from config.config import settings
 
+class UoMController:
 
-class UoMCategoryController:
     @staticmethod
     async def Find(
         name: str | None,
+        categoryId: ObjectId | None,
+        isActive: bool | None,
         companyId: ObjectId,
         paging: MsPagination
-    ) -> MsPaginationResult[UoMCategoryView]:
+    ):
         query: dict[str, Any] = {
-                "isDeleted": False,
-                "companyId": companyId
-            }
-        if name is not None:
-            name = name.strip()
-            if len(name) > 0:
-                namePattern = re.compile(re.escape(name), re.IGNORECASE)
-                query.update(
-                    {
-                        "name": { "$regex": namePattern}
-                    }
-                )
+            "isDeleted": False,
+            "companyId": companyId
+        }
+        query.update({
+            "name": {"$regex": re.compile(re.escape(name.strip()), re.IGNORECASE)} 
+            if name and name.strip() else None,
+            "categoryId": categoryId if categoryId is not None else None,
+            "isActive": isActive if isActive is not None else None
+        })
 
+        # Remove None values from the query
+        query = {k: v for k, v in query.items() if v is not None}
         print(query)
 
         # Paginate and return results
         data = await Paginate(
-            collection=TbUomCategory,
+            collection=TbUom,
             query_filter=query,
             params=paging,
             session=None,
-            hint=index_uom_category.isDeleted_companyId_name.value.indexName,
+            hint=index_uom.isDeleted_companyId_isActive_categoryId_name.value.indexName,
             filterItem=True,
-            resultItemsClass=UoMCategoryView,
+            resultItemsClass=UoMView,
             explain=True if settings.project.environment == MsEnvironment.development else False
         )
 
         return data
-        
+    
     @staticmethod
     async def Combo(
         name: str | None,
+        categoryId: ObjectId | None,
+        isActive: bool | None,
         companyId: ObjectId
     ):
-        data = await UoMCategoryRepository.Combo(
+        data = await UoMRepository.Combo(
             name,
+            categoryId,
+            isActive,
             companyId
         )
 
@@ -68,12 +73,12 @@ class UoMCategoryController:
         id: ObjectId,
     ):
         
-        data = await UoMCategoryRepository.GetById(
+        data = await UoMRepository.GetById(
             id
         )
 
         if data is None:
-            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.UOM_CATEGORY_NOT_FOUND)
+            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, MsHTTPExceptionMessage.UOM_NOT_FOUND)
         
         return data
     
@@ -82,66 +87,70 @@ class UoMCategoryController:
         id: ObjectId,
         companyId: ObjectId
     ):
-        data = await UoMCategoryRepository.GetByIdAndCompanyId(
+        data = await UoMRepository.GetByIdAndCompanyId(
             id, companyId
         )
         if data is None:
-            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, "UOM_CATEGORY_NOT_FOUND")
+            raise MsHTTPNotFoundException(MsHTTPExceptionType.NOT_FOUND, "UOM_NOT_FOUND")
         
         return data
-
+    
     @staticmethod
     async def Create(
         companyId: ObjectId,
-        request: UoMCategoryCreateWebRequest,
+        request: UoMCreateWebRequest,
         createdTime: datetime,
         createdBy: ObjectId
     ):
-        if await UoMCategoryRepository.NameExists(
+        if await UoMRepository.NameExists(
             request.name,
             companyId
         ):
             raise MsHTTPConflictException(
-                MsHTTPExceptionType.UOM_CATEGORY_NAME_ALREADY_EXISTS, 
-                MsHTTPExceptionMessage.UOM_CATEGORY_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
+                MsHTTPExceptionType.UOM_NAME_ALREADY_EXISTS, 
+                MsHTTPExceptionMessage.UOM_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
                 )
-        newMasterDataId = await UoMCategoryRepository.Create(
-            UoMCategoryCreateCommandRequest(
+        newId = await UoMRepository.Create(
+            UoMCreateCommandRequest(
                 name=request.name,
+                categoryId=request.categoryId,
+                type=request.type,
+                ratio=request.ratio,
+                isActive=request.isActive,
                 companyId=companyId,
                 createdTime= createdTime,
                 createdBy=createdBy 
             ),
         )
-        if not newMasterDataId:
+        if not newId:
             raise MsHTTPInternalServerErrorException(
-                type="FAILED_CREATE_UOM_CATEGORY"
+                type="FAILED_CREATE_UOM"
             )
-        return newMasterDataId
+        return newId
     
     @staticmethod
     async def UpdateByIdAndCompanyId(
         id: ObjectId,
-        request: UoMCategoryCreateWebRequest,
+        request: UoMCreateWebRequest,
         companyId: ObjectId,
         updatedTime: datetime,
         updatedBy: ObjectId
     ): 
-        data = await UoMCategoryController.GetByIdAndCompanyId(
+        data = await UoMController.GetByIdAndCompanyId(
             id, companyId
         )
         if data.name == request.name: 
             return data
 
-        if await UoMCategoryRepository.NameExists(
+        if await UoMRepository.NameExists(
             request.name,companyId
         ):
             raise MsHTTPConflictException(
-                MsHTTPExceptionType.UOM_CATEGORY_NAME_ALREADY_EXISTS, 
-                MsHTTPExceptionMessage.UOM_CATEGORY_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
+                MsHTTPExceptionType.UOM_NAME_ALREADY_EXISTS, 
+                MsHTTPExceptionMessage.UOM_NAME_ALREADY_EXISTS_F.value.format(name=request.name)
                 )
 
-        if not await UoMCategoryRepository.UpdateByUser(
+        if not await UoMRepository.UpdateByUser(
             data.id,
             {
                 "name" : request.name
@@ -151,10 +160,10 @@ class UoMCategoryController:
         ): 
             raise MsHTTPInternalServerErrorException(
                 "FAILED_UPDATE_UOM_CATEGORY",
-                "Gagal mengubah Kategori Unit Of Measure"
+                "Gagal mengubah Unit Of Measure"
             )
         
-        updatedData = await UoMCategoryController.GetByIdAndCompanyId(data.id, companyId)
+        updatedData = await UoMController.GetByIdAndCompanyId(data.id, companyId)
 
         return updatedData
     
@@ -166,12 +175,12 @@ class UoMCategoryController:
         updatedTime: datetime,
         updatedBy: ObjectId
     ): 
-        data = await UoMCategoryController.GetByIdAndCompanyId(
+        data = await UoMController.GetByIdAndCompanyId(
             id,
             companyId
         )
 
-        if not await UoMCategoryRepository.UpdateByUser(
+        if not await UoMRepository.UpdateByUser(
             data.id,
             {
                 "isDeleted" : True
@@ -180,11 +189,11 @@ class UoMCategoryController:
             updatedTime
         ): 
             raise MsHTTPInternalServerErrorException(
-                "FAILED_DELETE_UOM_CATEGORY",
-                "Gagal menghapus Kategori Unit of Measure"
+                "FAILED_DELETE_UOM",
+                "Gagal menghapus Unit of Measure"
             )
         
-        deletedData = await UoMCategoryRepository.GetByIdAndCompanyId(
+        deletedData = await UoMRepository.GetByIdAndCompanyId(
             id,
             companyId,
             ignoreDeleted=True

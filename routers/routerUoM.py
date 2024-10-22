@@ -3,150 +3,169 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query
 
 from auth.authUser import AuthUserDep
-from controller.controllerUoMCategory import UoMCategoryController
+from controller.controllerUoM import UoMController
 from models.service_membership.modelCredentialLocation import CredentialLocation
 from models.service_membership.modelMembershipAuth import VerifyEndpointCompanyResult
 from models.shared.modelDataType import ObjectId
 from models.shared.modelPagination import MsPagination
 from models.shared.modelResponse import SuccessMessage
-from models.uom.modelUoMCategory import ResponseComboUoMCategoryView, ResponsePagingUoMCategoryView, ResponseUoMCategoryView, UoMCategoryCreateWebRequest
+from models.uom.modelUoM import ResponseComboUoMView, ResponsePagingUoMView, ResponseUoMView, UoMCreateWebRequest
 from utils.util_http_exception import MsHTTPBadRequestException, MsHTTPNotFoundException
 
-ApiRouter_UoM_Category = APIRouter(
-    prefix="/uom/category",
-    tags=["UoM Category Management"]
+
+ApiRouter_UoM = APIRouter(
+    prefix="/uom",
+    tags=["Unit Of Measure Management"]
 )
 
-@ApiRouter_UoM_Category.get(
+@ApiRouter_UoM.get(
     path="/find",
-    response_model=ResponsePagingUoMCategoryView,
-    operation_id="find_uom_category",
-    summary="Find Unit Of Measure Category",
+    response_model=ResponsePagingUoMView,
+    operation_id="find_uom",
+    summary="Find Unit Of Measure",
     openapi_extra={
         "x-credentialLocations": [
             CredentialLocation.company
         ]
     }
 )
-async def ApiRouter_UoM_Category_Find(
+async def ApiRouter_UoM_Find(
     credential: Annotated[VerifyEndpointCompanyResult, Depends(AuthUserDep.VerifyEndpointCompany)],
     paging: Annotated[MsPagination, Depends(MsPagination.QueryParam)],
     name: str = Query(
         default=None,
-        description="Unit Of Measure Category Name"
+        description="Unit Of Measure Name"
+    ),
+    categoryId: ObjectId = Query( 
+        None,
+        description="Unit Of Measure Category Id"
+    ),
+    isActive: bool = Query(
+        None,
+        description="Active"
     )
 ):
-    data = await UoMCategoryController.Find(
+    data = await UoMController.Find(
         name,
+        categoryId,
+        isActive,
         credential.companyId,
         paging
     )
-    return ResponsePagingUoMCategoryView(type=SuccessMessage.SUCCESS_READ, data=data)
+    return ResponsePagingUoMView(type=SuccessMessage.SUCCESS_READ, data=data)
 
-@ApiRouter_UoM_Category.get(
+@ApiRouter_UoM.get(
     path="/combo",
-    response_model=ResponseComboUoMCategoryView,
-    operation_id="combo_uom_category",
-    summary="Combo Unit Of Measure Category",
+    response_model=ResponseComboUoMView,
+    operation_id="combo_uom",
+    summary="Combo Unit Of Measure",
     openapi_extra={
         "x-credentialLocations": [
             CredentialLocation.company
         ]
     }  
 )
-async def ApiRouter_UoM_Category_Combo(
+async def ApiRouter_UoM_Combo(
     credential: Annotated[VerifyEndpointCompanyResult, Depends(AuthUserDep.VerifyEndpointCompany)],
     name: str = Query(
+        default=None,
+        description="Unit Of Measure Name"
+    ),
+    categoryId: ObjectId = Query( 
         None,
-        description="Category Name"
+        description="Unit Of Measure Category Id"
+    ),
+    isActive: bool = Query(
+        None,
+        description="Active"
     )
 ):
-    data = await UoMCategoryController.Combo(
-        name, credential.companyId
+    data = await UoMController.Combo(
+        name, categoryId, isActive, credential.companyId
     )
-    return ResponseComboUoMCategoryView(type=SuccessMessage.SUCCESS_READ, data=data)
+    return ResponseComboUoMView(type=SuccessMessage.SUCCESS_READ, data=data)
 
-@ApiRouter_UoM_Category.get(
+@ApiRouter_UoM.get(
     "/get/{id}",
-    response_model=ResponseUoMCategoryView,
-    operation_id="get_uom_category_by_id",
-    summary="Get Unit Of Measure Category by Id",
+    response_model=ResponseUoMView,
+    operation_id="get_uom_by_id",
+    summary="Get Unit Of Measure by Id",
     openapi_extra={
         "x-credentialLocations": [
             CredentialLocation.company
         ]
     }   
 )
-async def ApiRouter_UoM_Category_Get_By_Id(
+async def ApiRouter_UoM_Get_By_Id(
     credential: Annotated[VerifyEndpointCompanyResult, Depends(AuthUserDep.VerifyEndpointCompany)],
     id: ObjectId = Path(
         default=...,
-        description="UoM Category Id"
+        description="UoM Id"
         )
 ):
-    data= await UoMCategoryController.GetByIdAndCompanyId(
+    data= await UoMController.GetByIdAndCompanyId(
         id,credential.companyId
     )
 
-    return ResponseUoMCategoryView(type=SuccessMessage.SUCCESS_READ, data=data)
+    return ResponseUoMView(type=SuccessMessage.SUCCESS_READ, data=data)
 
-@ApiRouter_UoM_Category.post(
+@ApiRouter_UoM.post(
     path="/create",
-    response_model=ResponseUoMCategoryView,
-    operation_id="create_uom_category",
-    summary="Create Unit Of Measure Category",
+    response_model=ResponseUoMView,
+    operation_id="create_uom",
+    summary="Create Unit Of Measure ",
     openapi_extra={
         "x-credentialLocations": [
             CredentialLocation.company
         ]
     }   
 )
-async def ApiRouter_UoM_Category_Create(
+async def ApiRouter_UoM_Create(
     credential: Annotated[VerifyEndpointCompanyResult, Depends(AuthUserDep.VerifyEndpointCompany)],
-    request: UoMCategoryCreateWebRequest
+    request: UoMCreateWebRequest
 ):
     request.name = request.name.strip()
     if len(request.name) == 0:
         raise MsHTTPBadRequestException(
             type="EMPTY_FIELD_NAME",
-            message="Nama Kategori belum diisi"
+            message="Nama belum diisi"
         )
-    newCategory= await UoMCategoryController.Create(
+    new= await UoMController.Create(
         credential.companyId,
         request,
         datetime.now(timezone.utc).replace(tzinfo=None),
         credential.accountId
     )
-    ret = await UoMCategoryController.GetByIdAndCompanyId(newCategory, credential.companyId)
+    ret = await UoMController.GetByIdAndCompanyId(new, credential.companyId)
 
-    return ResponseUoMCategoryView(type=SuccessMessage.SUCCESS_CREATED, data=ret)
+    return ResponseUoMView(type=SuccessMessage.SUCCESS_CREATED, data=ret)
 
-@ApiRouter_UoM_Category.put(
+@ApiRouter_UoM.put(
     path="/update/{id}",
-    response_model=ResponseUoMCategoryView,
-    operation_id="update_uom_category",
-    summary="Update Unit Of Measure Category",
+    response_model=ResponseUoMView,
+    operation_id="update_uom",
+    summary="Update Unit Of Measure ",
     openapi_extra={
         "x-credentialLocations": [
             CredentialLocation.company
         ]
     }   
 )
-async def ApiRouter_UoM_Category_Update(
+async def ApiRouter_UoM_Update(
     credential: Annotated[VerifyEndpointCompanyResult, Depends(AuthUserDep.VerifyEndpointCompany)],
-    request: UoMCategoryCreateWebRequest,
+    request: UoMCreateWebRequest,
     id: ObjectId = Path(
         default=...,
-        description="UoM Category Id"
+        description="UoM  Id"
     )
 ):
     request.name = request.name.strip()
     if len(request.name) == 0:
         raise MsHTTPBadRequestException(
             type="EMPTY_FIELD_NAME",
-            message="Nama Kategori belum diisi"
+            message="Nama belum diisi"
         )
-    updatedData = await UoMCategoryController.UpdateByIdAndCompanyId(
+    updatedData = await UoMController.UpdateByIdAndCompanyId(
         id,
         request,
         credential.companyId,
@@ -154,33 +173,33 @@ async def ApiRouter_UoM_Category_Update(
         credential.accountId
     )
 
-    return ResponseUoMCategoryView(type=SuccessMessage.SUCCESS_UPDATED, data = updatedData)
+    return ResponseUoMView(type=SuccessMessage.SUCCESS_UPDATED, data = updatedData)
 
-@ApiRouter_UoM_Category.delete(
+@ApiRouter_UoM.delete(
     path="/delete/{id}",
-    response_model=ResponseUoMCategoryView,
-    operation_id="delete_uom_category",
-    summary="Delete Unit Of Measure Category",
+    response_model=ResponseUoMView,
+    operation_id="delete_uom",
+    summary="Delete Unit Of Measure ",
     openapi_extra={
         "x-credentialLocations": [
             CredentialLocation.company
         ]
     }
 )
-async def ApiRouter_UoM_Category_Delete(
+async def ApiRouter_UoM_Delete(
     credential: Annotated[VerifyEndpointCompanyResult, Depends(AuthUserDep.VerifyEndpointCompany)],
     id: ObjectId = Path(
         default=...,
-        description="UoM Category Id"
+        description="UoM  Id"
     )
 ):
-    updatedData = await UoMCategoryController.Delete(
+    updatedData = await UoMController.Delete(
         id,
         credential.companyId,
         datetime.now(timezone.utc).replace(tzinfo=None),
         credential.accountId
     )
     if updatedData is None:
-        raise MsHTTPNotFoundException("UOM_CATEGORY_NOT_FOUND", "Unit Of Measure Category not found")
+        raise MsHTTPNotFoundException("UOM_NOT_FOUND", "Unit Of Measure not found")
     
-    return ResponseUoMCategoryView(type=SuccessMessage.SUCCESS_DELETED, data = updatedData)
+    return ResponseUoMView(type=SuccessMessage.SUCCESS_DELETED, data = updatedData)

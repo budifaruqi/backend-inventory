@@ -2,23 +2,22 @@ from datetime import datetime
 import re
 from typing import Any
 from classes.classMongoDb import TMongoClientSession, TMongoCollection
+from models.generic_material.modelGenericMaterialCategory import GenericMaterialCategoryCreateCommandRequest, GenericMaterialCategoryView
 from models.shared.modelDataType import BaseModelObjectId, ObjectId, TGenericBaseModel
-from models.uom.modelUoMCategory import UoMCategoryCreateCommandRequest, UoMCategoryView
-from mongodb.mongoCollection import TbUomCategory
-from mongodb.mongoIndex import index_id, index_uom_category
+from mongodb.mongoCollection import TbGenericMaterialCategory
+from mongodb.mongoIndex import index_id, index_generic_material_category
 from pymongo.results import InsertOneResult
 
-
-class UoMCategoryRepository:
+class GenericMaterialCategoryRepository:
 
     @staticmethod
     async def GetById(
     id: ObjectId,
     *,
-    coll: TMongoCollection = TbUomCategory,
+    coll: TMongoCollection = TbGenericMaterialCategory,
     session: TMongoClientSession | None = None,
     ignoreDeleted: bool = False,
-    resultClass: type[TGenericBaseModel] = UoMCategoryView
+    resultClass: type[TGenericBaseModel] = GenericMaterialCategoryView
     ) :
         query: dict[str, Any] = {"_id": id}
         if not ignoreDeleted:
@@ -39,9 +38,9 @@ class UoMCategoryRepository:
         name: str | None ,
         companyId: ObjectId,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbGenericMaterialCategory,
         session: TMongoClientSession | None = None,
-        resultClass: type[TGenericBaseModel] = UoMCategoryView
+        resultClass: type[TGenericBaseModel] = GenericMaterialCategoryView
     ):
         query:dict[str, Any]= {
                 "isDeleted": False,
@@ -62,7 +61,7 @@ class UoMCategoryRepository:
             query,
             resultClass.Projection(),
             session=session,
-            hint=index_uom_category.isDeleted_companyId_name.value.indexName
+            hint=index_generic_material_category.isDeleted_companyId_name.value.indexName
         )
         itemsRaw: list[dict[str, Any]] = await cursor.to_list(None) # type: ignore
 
@@ -73,10 +72,10 @@ class UoMCategoryRepository:
         id: ObjectId,
         companyId: ObjectId,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbGenericMaterialCategory,
         session: TMongoClientSession | None = None,
         ignoreDeleted: bool = False,
-        resultClass: type[TGenericBaseModel] = UoMCategoryView
+        resultClass: type[TGenericBaseModel] = GenericMaterialCategoryView
     ):
         query: dict[str, Any] = {
             "_id": id,
@@ -101,7 +100,7 @@ class UoMCategoryRepository:
         name: str,
         companyId: ObjectId,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbGenericMaterialCategory,
         session: TMongoClientSession | None = None,
         resultClass: type[TGenericBaseModel] = BaseModelObjectId
     ):
@@ -115,7 +114,7 @@ class UoMCategoryRepository:
             query,
             resultClass.Projection(),
             session=session,
-            hint=index_uom_category.isDeleted_companyId_name.value.indexName
+            hint=index_generic_material_category.isDeleted_companyId_name.value.indexName
         )
         if not dataRaw:
             return None
@@ -127,7 +126,7 @@ class UoMCategoryRepository:
         id: ObjectId,
         param: dict[str, Any],
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbGenericMaterialCategory,
         session: TMongoClientSession | None = None
     ):
         ret = await coll.update_one(
@@ -149,13 +148,13 @@ class UoMCategoryRepository:
         updatedBy: ObjectId,
         updatedTime: datetime,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbGenericMaterialCategory,
         session: TMongoClientSession | None = None
     ):
         param["updatedBy"] = updatedBy
         param["updatedTime"] = updatedTime
         
-        return await UoMCategoryRepository.Update(
+        return await GenericMaterialCategoryRepository.Update(
             id,
             param,
             coll=coll,
@@ -167,9 +166,9 @@ class UoMCategoryRepository:
     @staticmethod
     async def CreateOrUpdate(
         id:ObjectId,
-        param: UoMCategoryCreateCommandRequest,
+        param: GenericMaterialCategoryCreateCommandRequest,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbGenericMaterialCategory,
         session: TMongoClientSession | None = None
     ):
         d = param.model_dump(by_alias=False, exclude={"id"})
@@ -191,9 +190,9 @@ class UoMCategoryRepository:
         
     @staticmethod
     async def Create(
-        request: UoMCategoryCreateCommandRequest,
+        request: GenericMaterialCategoryCreateCommandRequest,
         *,
-        coll: TMongoCollection = TbUomCategory,
+        coll: TMongoCollection = TbGenericMaterialCategory,
         session: TMongoClientSession | None = None
     ):
         ret: InsertOneResult = await coll.insert_one(

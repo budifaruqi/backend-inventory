@@ -12,7 +12,10 @@ TbMasterDataFollower: TMongoCollection = MGDB[CollectionNames.TbMasterDataFollow
 TbPartner: TMongoCollection = MGDB[CollectionNames.TbPartner.value]
 TbLead: TMongoCollection = MGDB[CollectionNames.TbLead.value]
 TbLeadTag: TMongoCollection = MGDB[CollectionNames.TbLeadTag.value]
-TbUoMCategory: TMongoCollection = MGDB[CollectionNames.TbUoMCategory.value]
-TbUoM: TMongoCollection = MGDB[CollectionNames.TbUoM.value]
+TbUomCategory: TMongoCollection = MGDB[CollectionNames.TbUomCategory.value]
+TbUom: TMongoCollection = MGDB[CollectionNames.TbUom.value]
+TbGenericMaterialCategory: TMongoCollection = MGDB[CollectionNames.TbGenericMaterialCategory.value]
+TbGenericMaterial: TMongoCollection = MGDB[CollectionNames.TbGenericMaterial.value]
+
 
 
